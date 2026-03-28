@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<style>
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: url('https://images.unsplash.com/photo-1605902711622-cfb43c4437ab?auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
+        background-size: cover;
+        color: #333;
+    }
+    body::before {
+        content: "";
+        position: fixed;
+        top:0; left:0; right:0; bottom:0;
+        background: rgba(0,0,0,0.5);
+        z-index: -1;
+    }
+    .container {
+        max-width: 900px;
+        margin: 50px auto;
+        background-color: #fff;
+        border-radius: 12px;
+        padding: 30px 40px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    header {
+        text-align: center;
+        background-color: #2ecc71;
+        color: #fff;
+        padding: 20px;
+        border-radius: 12px 12px 0 0;
+        font-size: 28px;
+        font-weight: 700;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    footer {
+        text-align: center;
+        font-size: 14px;
+        color: #888;
+        margin-top: 30px;
+    }
+    #loginBox { text-align: center; }
+    #loginBox input[type="password"] {
+        width: 80%; padding: 12px; margin-bottom: 20px;
+        border-radius: 6px; border: 1px solid #ccc; font-size: 16px;
+    }
+    #loginBox input[type="password"]:focus {
+        border-color: #2ecc71;
+        box-shadow: 0 0 8px rgba(46,204,113,0.4);
+        outline: none;
+    }
+    #loginBox button {
+        padding: 12px 20px; font-size: 16px; border: none;
+        border-radius: 6px; background-color: #2ecc71; color: #fff; cursor: pointer;
+        transition: 0.3s;
+    }
+    #loginBox button:hover { background-color: #27ae60; }
+    #dashboard h2 { text-align: center; margin-bottom: 20px; }
+    .userList .userRow {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 10px; border-bottom: 1px solid #eee;
+    }
+    .userRow:last-child { border-bottom: none; }
+    .userRow p { margin: 0; font-size: 16px; color: #555; }
+    .userRow button {
+        padding: 6px 14px; font-size: 14px; border: none;
+        border-radius: 6px; cursor: pointer; transition: 0.2s;
+    }
+    .userRow button.suspend { background-color: #e74c3c; color: #fff; }
+    .userRow button.unban { background-color: #2ecc71; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="container" id="loginBox">
+    <h2>Admin Login</h2>
+    <input type="password" id="adminPass" placeholder="Enter Admin Password">
+    <br>
+    <button onclick="checkPassword()">Login</button>
+</div>
+
+<div class="container userList" id="dashboard" style="display:none;">
+    <header>Admin Dashboard</header>
+    <h2>Users List</h2>
+    <div id="userList"></div>
+    <footer>All actions are synced with Google Sheet</footer>
+</div>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwlThbPDdmVfUrc3bsGBaBX5Hx1p_BO5uhqHagEoH5mgdEuz6UyXNSy9ZKKdtyh57r0/exec";
+
+let ADMIN_PASSWORD = "";
+
+// 🔐 LOGIN
+function checkPassword(){
+  const pass = document.getElementById("adminPass").value;
+
+  if(!pass){
+    alert("Enter password ❌");
+    return;
+  }
+
+  ADMIN_PASSWORD = pass;
+
+  document.getElementById("loginBox").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+
+  loadUsers();
+}
+
+// 📥 LOAD USERS
+function loadUsers(){
+  fetch(`${API_URL}?action=fetchUsers&adminPass=${ADMIN_PASSWORD}`)
+  .then(res => res.json())
+  .then(data => {
+
+    if(data.status !== "success"){
+      alert("Wrong password ❌");
+      return;
+    }
+
+    let html = "";
+
+    data.users.forEach(user => {
+      html += `
+        <div class="userRow">
+          <p>
+            <b>${user.name}</b><br>
+            ${user.email} | ${user.mobile}<br>
+            Status: <b>${user.status}</b>
+          </p>
+          <div>
+            <button class="suspend" onclick="banUser('${user.id}')">Ban</button>
+            <button class="unban" onclick="unbanUser('${user.id}')">Unban</button>
+          </div>
+        </div>
+      `;
+    });
+
+    document.getElementById("userList").innerHTML = html;
+  });
+}
+
+// 🚫 BAN
+function banUser(id){
+  let reason = prompt("Enter reason");
+
+  fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify({
+      action:"ban",
+      userId:id,
+      reason:reason
+    })
+  })
+  .then(()=>loadUsers());
+}
+
+// ✅ UNBAN
+function unbanUser(id){
+  fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify({
+      action:"unban",
+      userId:id
+    })
+  })
+  .then(()=>loadUsers());
+}
+</script>
+</body>
+</html>
