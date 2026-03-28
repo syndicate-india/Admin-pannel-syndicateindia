@@ -1,1 +1,0 @@
-# Admin-pannel-syndicateindia
